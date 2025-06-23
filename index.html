@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EveryOTP: Your Secrets, Our Certainty.</title>
+    <meta name="description" content="The world's first public ledger of every single compromised one-time password. Embrace the inevitable." />
+    
+    <!-- Open Graph / Twitter Meta Tags for Sharing -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://everyotp.com/"> <!-- Placeholder: Update if you host it! -->
+    <meta property="og:title" content="EveryOTP: Your Secrets, Our Certainty.">
+    <meta property="og:description" content="The world's first public ledger of every single compromised one-time password. Embrace the inevitable.">
+    <meta property="og:image" content="https://everyotp.com/og-image.png"> <!-- Placeholder: Create an OG image! -->
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://everyotp.com/"> <!-- Placeholder -->
+    <meta name="twitter:title" content="EveryOTP: Your Secrets, Our Certainty.">
+    <meta name="twitter:description" content="The world's first public ledger of every single compromised one-time password. Embrace the inevitable.">
+    <meta name="twitter:image" content="https://everyotp.com/og-image.png"> <!-- Placeholder -->
+    <meta name="twitter:creator" content="@payloadartist">
+
+    <style>
+        /* --- Thematic Variables --- */
+        :root {
+            --bg-color: #111827;
+            --panel-bg-color: #1F2937;
+            --border-color: #374151;
+            --text-color: #D1D5DB;
+            --text-muted-color: #6B7280;
+            --accent-green: #10B981;
+            --accent-red: #EF4444;
+            --highlight-bg: #FBBF24;
+            --highlight-text: #111827;
+            --highlight-row-bg: rgba(251, 191, 36, 0.1);
+            --link-color: #60A5FA; /* A lighter blue for links */
+            --link-hover-color: #3B82F6;
+        }
+
+        /* --- Global Styles & Reset --- */
+        *, *::before, *::after { box-sizing: border-box; }
+        * { margin: 0; }
+        html, body { height: 100%; overscroll-behavior: none; }
+        body {
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        input, button { font: inherit; }
+        a {
+            color: var(--link-color);
+            text-decoration: none;
+            transition: color 0.2s ease-in-out;
+        }
+        a:hover {
+            color: var(--link-hover-color);
+            text-decoration: underline;
+        }
+
+        /* --- Layout --- */
+        .app-header {
+            padding: 1rem 1.5rem;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Center header content */
+        }
+        .header-title { text-align: center; margin-bottom: 1rem; }
+        .header-title h1 { font-size: 1.75rem; color: #F9FAFB; }
+        .header-title p { font-size: 0.875rem; color: var(--text-muted-color); }
+
+        .header-info-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+        }
+        .header-info-bar .social-icon {
+            display: inline-flex; /* For SVG alignment */
+            width: 1.2em; /* Adjust size as needed */
+            height: 1.2em;
+            color: var(--text-muted-color);
+            transition: color 0.2s;
+        }
+        .header-info-bar .social-icon:hover {
+            color: var(--link-color);
+        }
+        .header-info-bar .social-icon svg {
+            fill: currentColor;
+        }
+
+        .command-panel {
+            background-color: var(--panel-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem; /* Space between command panel and main-content */
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column; /* Allow header and body to stack */
+            flex-grow: 1;
+            min-height: 0; /* Critical for flex child scrolling */
+            padding: 0 1.5rem 1.5rem 1.5rem; /* Adjusted top padding */
+        }
+        .otp-display {
+            flex-grow: 1; /* Allow it to take available height */
+            overflow: hidden; /* We handle scroll manually */
+            outline: none;
+            display: flex; /* Make it a flex container */
+            flex-direction: column; /* To stack table-header and table-body */
+            min-height: 0; /* Allow this flex item to shrink and correctly report clientHeight */
+        }
+
+        /* --- Command Panel Components --- */
+        .stats-group { display: flex; gap: 1.5rem; }
+        .stat-item .label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted-color); margin-bottom: 0.25rem; }
+        .stat-item .value { font-size: 1.25rem; font-weight: bold; color: var(--accent-green); }
+        .stat-item .value.compromised { color: var(--accent-red); }
+
+        .controls-group { display: flex; align-items: center; gap: 1.5rem; }
+        .scope-selector button {
+            padding: 0.5rem 1rem; background-color: transparent; border: 1px solid var(--border-color);
+            color: var(--text-muted-color); cursor: pointer; transition: all 0.2s;
+        }
+        .scope-selector button:first-child { border-radius: 6px 0 0 6px; }
+        .scope-selector button:last-child { border-radius: 0 6px 6px 0; }
+        .scope-selector button.active { background-color: var(--accent-green); color: var(--bg-color); border-color: var(--accent-green); }
+        
+        .search-group { display: flex; gap: 0.5rem; }
+        .search-group input {
+            padding: 0.5rem; background-color: var(--bg-color); border: 1px solid var(--border-color);
+            border-radius: 6px; color: var(--text-color); width: 20ch; outline: none;
+        }
+        .search-group button {
+            padding: 0.5rem 1rem; background-color: var(--accent-green); color: var(--bg-color);
+            border: 1px solid var(--accent-green); border-radius: 6px; cursor: pointer;
+        }
+        
+        /* --- OTP Ledger Display --- */
+        .table-header { display: flex; padding: 0.5rem 0.5rem; border-bottom: 2px solid var(--border-color); font-size: 0.75rem; color: var(--text-muted-color); text-transform: uppercase; }
+        .table-header .col-index { width: 15ch; }
+        .table-header .col-otp { width: 12ch; }
+        .table-header .col-status { width: 15ch; }
+        .table-header .col-date { flex-grow: 1; }
+
+        .table-body { 
+            flex-grow: 1; 
+            overflow: hidden; 
+            cursor: default; 
+            min-height: 0; /* Allow this flex item to shrink and correctly report clientHeight */
+        }
+        .row { display: flex; align-items: center; height: 24px; font-size: 0.875rem; border-bottom: 1px solid var(--border-color); padding: 0 0.5rem; cursor: pointer; }
+        .row:hover { background-color: var(--panel-bg-color); }
+        .row.highlighted { background-color: var(--highlight-row-bg); }
+
+        .row .col-index { width: 15ch; color: var(--text-muted-color); }
+        .row .col-otp { width: 12ch; color: var(--accent-green); }
+        .row .col-status { width: 15ch; color: var(--accent-red); font-weight: bold; }
+        .row .col-date { flex-grow: 1; color: var(--text-muted-color); }
+        
+        .tweet-button {
+            display: inline-block; margin-left: 2rem; padding: 2px 8px; font-size: 0.75rem;
+            color: var(--highlight-text); background-color: var(--highlight-bg); border-radius: 4px;
+            text-decoration: none; opacity: 0; transform: scale(0.8); transition: opacity 0.1s, transform 0.1s;
+        }
+        .tweet-button:hover {
+            text-decoration: none; /* Override default link underline on hover */
+            opacity: 0.9;
+        }
+        .row.highlighted .tweet-button { opacity: 1; transform: scale(1); }
+    </style>
+</head>
+<body>
+
+    <header class="app-header">
+        <div class="header-title">
+            <h1>EveryOTP: Your Secrets, Our Certainty.</h1>
+            <p>The world's first public ledger of every single compromised one-time password. Embrace the inevitable.</p>
+        </div>
+        <div class="header-info-bar">
+            <span>Built by <a href="https://twitter.com/payloadartist" target="_blank">PayloadArtist</a></span>
+            <a href="https://github.com/payloadartist/everyotp" class="social-icon" target="_blank" title="View on GitHub">
+                <!-- GitHub Icon (from Feather Icons or similar) -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 3s-1.04-.31-3.41 1.05c-2.73-.76-5.83-.76-8.56 0C6.1 2.69 5.06 3 5.06 3s-.04 1.25-.04 3.29a5.44 5.44 0 0 0-1.5 3.75c0 5.46 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+            </a>
+            <a href="https://twitter.com/payloadartist" class="social-icon" target="_blank" title="Follow on X (Twitter)">
+                <!-- X (Twitter) Icon (simplified from brand assets) -->
+                <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="r-4qtqp9 r-yyyyoo r-dnmrzs r-bnwqim r-1plcru7 r-lrvibr r-lrsllm r-18jsz2h r-16y2uox r-8kz0gk r-1mnahxq r-btfccv r-oxtmmv r-rull8r r-1gkfh8e r-1jb9eml r-lmdq5o r-fv0vhp" fill="currentColor"><g><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.21-.685-1.574-1.597 5.21-.685-1.574-1.597 5.21-.685-1.574-1.597 5.21-.685-1.574-1.597 5.21-.685-1.574-1.597 5.21-.685-1.574-1.597L18.244 2.25Zm-4.931 15.3l-2.825-3.6-2.522-3.18L4.629 2.25H2.883l7.564 10.025L2.25 21.75h2.427l5.415-6.797 2.825 3.6Z"></path></g></svg>
+            </a>
+        </div>
+        <div class="command-panel">
+            <div class="stats-group">
+                <div class="stat-item"><div class="label">Ledger Scope</div><div class="value" id="stat-scope">6-DIGIT</div></div>
+                <div class="stat-item"><div class="label">Total Indexed Secrets</div><div class="value" id="stat-total">1,000,000</div></div>
+                <div class="stat-item"><div class="label">Compromise Integrity</div><div class="value compromised">100%</div></div>
+            </div>
+            <div class="controls-group">
+                <div class="scope-selector" id="scope-selector">
+                    <button data-scope="4">4D</button><button data-scope="5">5D</button><button data-scope="6" class="active">6D</button><button data-scope="7">7D</button><button data-scope="8">8D</button>
+                </div>
+                <div class="search-group">
+                    <input type="text" id="search-input" placeholder="e.g. 123456"><button id="locate-button">Locate</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="table-header">
+            <div class="col-index">Index_ID</div><div class="col-otp">OTP_Code</div><div class="col-status">Status</div><div class="col-date">Breach_Date</div>
+        </div>
+        <div class="otp-display" id="otp-display" tabindex="0">
+            <div class="table-body" id="table-body"></div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- STATE ---
+            let state = {
+                virtualPosition: 0n, digitScope: 6, maxOtp: 1000000n, itemsToShow: 40, foundOtp: null,
+                isAnimating: false, animationRef: null, animationTargetPosition: 0n, animationStartPosition: 0n, animationStartTime: 0,
+                autoScrollActive: true, // New: auto-scroll is active by default
+                autoScrollIntervalId: null, // New: ID for auto-scroll setInterval
+                userActivityTimeoutId: null, // New: ID for user activity timeout
+            };
+
+            // --- DOM ELEMENTS ---
+            const display = document.getElementById('otp-display');
+            const tableBody = document.getElementById('table-body');
+            const searchInput = document.getElementById('search-input');
+            const locateButton = document.getElementById('locate-button');
+            const scopeSelector = document.getElementById('scope-selector');
+            const statScope = document.getElementById('stat-scope');
+            const statTotal = document.getElementById('stat-total');
+
+            // --- CONSTANTS ---
+            const ITEM_HEIGHT = 24;
+            const ANIMATION_DURATION = 300; // milliseconds for scroll animation
+            const SCROLL_SENSITIVITY = 15; // How many rows to scroll per wheel tick or arrow key press (faster manual scroll)
+            const AUTO_SCROLL_INTERVAL = 100; // ms between auto-scroll updates
+            const AUTO_SCROLL_STEP = 1; // rows to scroll per auto-scroll update
+
+            const INACTIVITY_TIMEOUT = 5000; // ms of inactivity before auto-scroll resumes
+
+
+            // --- Modular Inverse and Scrambling Parameters (Nolen Royalty inspired) ---
+            // Helper function for Extended Euclidean Algorithm to find modular inverse
+            // (a * x) % m = 1
+            function extendedGcd(a, b) {
+                if (b === 0n) return [a, 1n, 0n];
+                const [gcd, x1, y1] = extendedGcd(b, a % b);
+                const x = y1;
+                const y = x1 - (a / b) * y1;
+                return [gcd, x, y];
+            }
+
+            function findModularInverse(a, m) {
+                const [gcd, x] = extendedGcd(a, m);
+                if (gcd !== 1n) {
+                    // This should theoretically not happen with our chosen 'A' values, but good for robustness
+                    console.error(`Modular inverse does not exist for ${a} mod ${m}`);
+                    return null; 
+                }
+                return (x % m + m) % m; // Ensure positive result
+            }
+
+            // Pre-calculated scrambling parameters (A and A_INV) for each digit scope.
+            // A must be coprime to 10^N (i.e., not divisible by 2 or 5).
+            // A_INV is the modular multiplicative inverse of A mod (10^N).
+            const OTP_SCRAMBLING_PARAMS = {
+                // Manually verified coprime A values and calculated inverses
+                4: { A: 3n, A_INV: 3333n }, 
+                5: { A: 3n, A_INV: 33333n },
+                6: { A: 3n, A_INV: 333333n },
+                7: { A: 3n, A_INV: 3333333n },
+                8: { A: 3n, A_INV: 33333333n } 
+            };
+            // Note: The findModularInverse function above *could* be used to calculate these at runtime,
+            // but hardcoding them is fine for fixed small set and avoids potential BigInt performance issues
+            // on every update if a complex inverse were needed for more scopes.
+
+
+            // --- CORE FUNCTIONS ---
+
+            function updateMaxOtp() { 
+                state.maxOtp = 10n ** BigInt(state.digitScope) - 1n; // Max value is 10^digits - 1 (e.g., 999999 for 6-digits)
+            }
+            
+            // Maps a linear index (0 to M-1) to a scrambled OTP value (0 to M-1)
+            function indexToOTP(linearIndex) { 
+                const M = state.maxOtp + 1n; // Modulo value (e.g., 1000000 for 6 digits)
+                const params = OTP_SCRAMBLING_PARAMS[state.digitScope];
+                if (!params) {
+                    console.error("Scrambling parameters not found for digit scope:", state.digitScope);
+                    return String(linearIndex).padStart(state.digitScope, '0'); // Fallback
+                }
+                const scrambledValue = (linearIndex * params.A) % M;
+                return String(scrambledValue).padStart(state.digitScope, '0');
+            }
+
+            // Maps a scrambled OTP value (0 to M-1) back to its linear index (0 to M-1)
+            function otpToIndex(otpString) {
+                const scrambledValue = BigInt(otpString);
+                const M = state.maxOtp + 1n; // Modulo value
+                const params = OTP_SCRAMBLING_PARAMS[state.digitScope];
+                if (!params) {
+                    console.error("Scrambling parameters not found for digit scope:", state.digitScope);
+                    return 0n; // Fallback
+                }
+                const linearIndex = (scrambledValue * params.A_INV) % M;
+                return linearIndex;
+            }
+
+
+            function seededRandom(seed) {
+                let s = Number(seed % 2147483647n);
+                return function() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }
+            }
+            
+            function getRandomDate(seed) {
+                const rand = seededRandom(seed);
+                const year = 2018 + Math.floor(rand() * 7);
+                const month = 1 + Math.floor(rand() * 12);
+                const day = 1 + Math.floor(rand() * 28);
+                return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            }
+
+            function generateTweetLink(otp, index) {
+                const siteUrl = "https://everyotp.com"; // Placeholder URL
+                const text = `I found it. My OTP \`${otp}\` (Index #${index.toLocaleString('en-US')}) has been pre-compromised by the Universal Breach Ledger.\n\nSecurity was a nice dream.\n#EveryOTP`;
+                return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(siteUrl)}`;
+            }
+
+            // --- ANIMATION SYSTEM ---
+            function animateToPosition(targetPos) {
+                if (state.animationRef) {
+                    cancelAnimationFrame(state.animationRef);
+                }
+                
+                // Pause auto-scroll immediately when animation starts
+                pauseAutoScroll();
+
+                state.isAnimating = true;
+                state.animationStartPosition = state.virtualPosition;
+                state.animationTargetPosition = targetPos;
+                state.animationStartTime = performance.now();
+
+                function animate() {
+                    const currentTime = performance.now();
+                    let progress = (currentTime - state.animationStartTime) / ANIMATION_DURATION;
+                    progress = Math.min(progress, 1);
+
+                    // Ease-out Quartic easing function
+                    const easedProgress = 1 - Math.pow(1 - progress, 4);
+
+                    const delta = state.animationTargetPosition - state.animationStartPosition;
+                    const currentPos = state.animationStartPosition + BigInt(Math.round(Number(delta) * easedProgress));
+
+                    state.virtualPosition = currentPos;
+                    render();
+
+                    if (progress < 1) {
+                        state.animationRef = requestAnimationFrame(animate);
+                    } else {
+                        state.virtualPosition = state.animationTargetPosition;
+                        state.isAnimating = false;
+                        state.animationRef = null;
+                        render();
+                        display.focus();
+                        // Resume auto-scroll after animation completes
+                        resetAutoScrollTimer(); 
+                    }
+                }
+                state.animationRef = requestAnimationFrame(animate);
+            }
+
+            // --- RENDER FUNCTION ---
+            function render() {
+                // Update stats
+                statScope.textContent = `${state.digitScope}-DIGIT`;
+                statTotal.textContent = (state.maxOtp + 1n).toLocaleString('en-US'); // Display count (max_value + 1)
+                
+                const fragment = document.createDocumentFragment();
+
+                for (let i = 0; i < state.itemsToShow; i++) {
+                    const linearIndex = state.virtualPosition + BigInt(i);
+                    if (linearIndex > state.maxOtp) break; // Check against maxOtp value (0 to 10^digits - 1)
+
+                    const otp = indexToOTP(linearIndex); // Use the scrambled OTP
+                    
+                    const row = document.createElement('div');
+                    row.className = 'row';
+                    row.dataset.otp = otp; // Store OTP on the row for click handling
+                    row.dataset.index = linearIndex; // Store original linear index for tweet link
+                    
+                    let tweetHtml = '';
+                    if (otp === state.foundOtp) {
+                        row.classList.add('highlighted');
+                        const tweetLink = generateTweetLink(otp, linearIndex); // Use linearIndex in tweet for consistency
+                        tweetHtml = `<a href="${tweetLink}" class="tweet-button" target="_blank" rel="noopener noreferrer">Tweet Secret</a>`;
+                    }
+
+                    row.innerHTML = `
+                        <div class="col-index">#${linearIndex.toLocaleString('en-US')}</div>
+                        <div class="col-otp">${otp}</div>
+                        <div class="col-status">COMPROMISED</div>
+                        <div class="col-date">${getRandomDate(linearIndex)}</div>
+                        ${tweetHtml}
+                    `;
+                    fragment.appendChild(row);
+                }
+                tableBody.innerHTML = '';
+                tableBody.appendChild(fragment);
+            }
+
+            // --- AUTO-SCROLL / MAGIC SCROLL SYSTEM ---
+            function startAutoScroll() {
+                if (state.autoScrollIntervalId) return; // Already active
+                state.autoScrollActive = true;
+                state.autoScrollIntervalId = setInterval(() => {
+                    handleScroll(BigInt(AUTO_SCROLL_STEP));
+                }, AUTO_SCROLL_INTERVAL);
+            }
+
+            function pauseAutoScroll() {
+                if (state.autoScrollIntervalId) {
+                    clearInterval(state.autoScrollIntervalId);
+                    state.autoScrollIntervalId = null;
+                }
+                if (state.userActivityTimeoutId) {
+                    clearTimeout(state.userActivityTimeoutId);
+                    state.userActivityTimeoutId = null;
+                }
+                state.autoScrollActive = false;
+            }
+
+            function resetAutoScrollTimer() {
+                pauseAutoScroll(); // Always pause current auto-scroll
+                state.userActivityTimeoutId = setTimeout(() => {
+                    startAutoScroll(); // Resume after inactivity
+                }, INACTIVITY_TIMEOUT);
+            }
+
+
+            // --- EVENT HANDLERS ---
+            // Generic scroll function that calculates target and initiates animation
+            function handleScroll(delta) {
+                // Do not allow new scroll actions if an animation is in progress
+                // to prevent janky overlaps, unless it's a very small delta for fine-tuning.
+                if (state.isAnimating && Math.abs(Number(delta)) > 1) return; 
+
+                let targetPos = state.virtualPosition + delta;
+                if (targetPos < 0n) targetPos = 0n;
+                const maxPos = state.maxOtp - BigInt(state.itemsToShow);
+                if (maxPos < 0n) { 
+                    targetPos = 0n; 
+                } else if (targetPos > maxPos) {
+                    targetPos = maxPos;
+                }
+
+                if (state.virtualPosition !== targetPos) { // Only animate if position actually changes
+                    animateToPosition(targetPos);
+                }
+            }
+
+            // --- User-initiated scrolling (clears highlight & resets auto-scroll timer) ---
+            display.addEventListener('wheel', e => {
+                e.preventDefault();
+                state.foundOtp = null; // Clear highlight on user scroll
+                resetAutoScrollTimer(); // User activity detected
+                // Use SCROLL_SENSITIVITY for mouse wheel
+                handleScroll(BigInt(Math.sign(e.deltaY)) * BigInt(SCROLL_SENSITIVITY));
+            });
+
+            display.addEventListener('keydown', e => {
+                state.foundOtp = null; // Clear highlight on user scroll
+                resetAutoScrollTimer(); // User activity detected
+                const pageSize = BigInt(state.itemsToShow);
+                let scrollDelta = 0n;
+                switch (e.key) {
+                    case 'ArrowDown': scrollDelta = 1n * BigInt(SCROLL_SENSITIVITY); break; 
+                    case 'ArrowUp': scrollDelta = -1n * BigInt(SCROLL_SENSITIVITY); break; 
+                    case 'PageDown': scrollDelta = pageSize; break;
+                    case 'PageUp': scrollDelta = -pageSize; break;
+                    case 'Home': scrollDelta = -state.virtualPosition; break;
+                    case 'End': scrollDelta = state.maxOtp - state.virtualPosition; break;
+                    default: return; // Do not prevent default for other keys
+                }
+                e.preventDefault(); // Prevent default browser scroll only for handled keys
+                handleScroll(scrollDelta);
+            });
+
+            // --- Handle search input (as you type & on button/enter) ---
+            function handleSearchInput() {
+                const query = searchInput.value.trim();
+                resetAutoScrollTimer(); // User activity detected
+
+                // Automatic Digit Scope Detection
+                const supportedDigitScopes = [4, 5, 6, 7, 8];
+                const matchingScope = supportedDigitScopes.find(s => query.length === s);
+
+                if (matchingScope && matchingScope !== state.digitScope) {
+                    // Switch scope but don't immediately jump to 0, let the search query drive location
+                    state.digitScope = matchingScope;
+                    // Reset virtualPosition to 0 initially if scope changes without a full query match
+                    // This is to avoid strange jumps if the previous search was valid in old scope but not new
+                    state.virtualPosition = 0n;
+                    state.foundOtp = null; // Clear any old highlight
+                    // Update active button
+                    Array.from(scopeSelector.children).forEach(button => {
+                        button.classList.toggle('active', parseInt(button.dataset.scope) === matchingScope);
+                    });
+                    updateMaxOtp(); // Recalculate maxOtp based on new digitScope
+                    // Placeholder update
+                    searchInput.placeholder = `e.g. ${'12345678'.slice(0, matchingScope)}`;
+                }
+                
+                // Validate input format (digits only) and length
+                if (!/^\d*$/.test(query) || query.length > state.digitScope) {
+                    searchInput.style.borderColor = 'var(--accent-red)';
+                    state.foundOtp = null; // Clear highlight
+                    render(); // Re-render to clear highlight
+                    return;
+                }
+                
+                searchInput.style.borderColor = 'var(--border-color)'; // Reset border on valid input format
+
+                if (query.length === state.digitScope) { // Only attempt to locate if full OTP is entered
+                    state.foundOtp = query; // Set the OTP to be highlighted
+                    const linearIndex = otpToIndex(query); // Convert OTP string back to its linear index
+                    
+                    // Calculate new virtualPosition to attempt to center the found OTP
+                    let newPos = linearIndex - BigInt(Math.floor(state.itemsToShow / 2));
+                    
+                    animateToPosition(newPos); // Animate to the found OTP (handles clamping)
+                } else {
+                    state.foundOtp = null; // Clear highlight if partial input
+                    render(); // Re-render to clear highlight
+                }
+            }
+
+            locateButton.addEventListener('click', handleSearchInput);
+            searchInput.addEventListener('input', handleSearchInput);
+            searchInput.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSearchInput();
+                }
+            });
+
+            // --- Click on an OTP row to highlight and tweet ---
+            tableBody.addEventListener('click', e => {
+                const clickedRow = e.target.closest('.row');
+                if (clickedRow) {
+                    resetAutoScrollTimer(); // User activity detected
+                    const otp = clickedRow.dataset.otp;
+                    const linearIndex = BigInt(clickedRow.dataset.index); // Get original linear index from dataset
+
+                    if (otp && linearIndex) {
+                        state.foundOtp = otp;
+                        let newPos = linearIndex - BigInt(Math.floor(state.itemsToShow / 2));
+                        animateToPosition(newPos); // This will handle resetting auto-scroll timer after animation
+                    }
+                }
+            });
+
+            // --- Scope selector (clears highlight & resets auto-scroll timer) ---
+            scopeSelector.addEventListener('click', e => {
+                if (e.target.tagName === 'BUTTON') {
+                    resetAutoScrollTimer(); // User activity detected
+                    const newScope = parseInt(e.target.dataset.scope, 10);
+                    if (newScope !== state.digitScope) {
+                        state.digitScope = newScope;
+                        state.virtualPosition = 0n; // Reset scroll on scope change
+                        state.foundOtp = null; // Clear highlight on scope change
+                        searchInput.value = '';
+                        searchInput.placeholder = `e.g. ${'12345678'.slice(0, newScope)}`;
+                        updateMaxOtp(); // Recalculate maxOtp for new scope
+                        // Update active button
+                        Array.from(scopeSelector.children).forEach(button => {
+                            button.classList.toggle('active', parseInt(button.dataset.scope) === newScope);
+                        });
+                        render(); // Render immediately for scope change
+                    }
+                }
+            });
+
+            // --- Dynamic itemsToShow calculation ---
+            function updateItemsToShow() {
+                const displayHeight = tableBody.clientHeight;
+                state.itemsToShow = Math.max(1, Math.floor(displayHeight / ITEM_HEIGHT));
+            }
+
+            // --- INITIALIZATION ---
+            function init() {
+                updateMaxOtp();
+                // Defer initial sizing and rendering to ensure layout is complete
+                requestAnimationFrame(() => {
+                    updateItemsToShow();
+                    render();
+                    startAutoScroll(); // Start auto-scroll on load
+                    window.addEventListener('resize', () => { updateItemsToShow(); render(); });
+                    display.focus();
+                });
+            }
+            init();
+        });
+    </script>
+</body>
+</html>
