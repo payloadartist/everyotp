@@ -6,9 +6,7 @@
 
 ## Live Demo
 
-See your 'secrets' exposed: **[Your GitHub Pages URL Here]**
-
-*(Remember to update this URL after you set up GitHub Pages!)*
+See your 'secrets' exposed: **https://everyotp.bugbountyhunting.com**
 
 ---
 
